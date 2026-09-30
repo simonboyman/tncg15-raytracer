@@ -1,5 +1,6 @@
-#include <include/triangle.h>
+#include <triangle.h>
 #include <cmath>
+#include "vec3.h"
 
 vec3 compute_normal(const vec3& v0, const vec3& v1, const vec3& v2) {
 	vec3 edge1 = v1 - v0;

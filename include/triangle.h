@@ -1,4 +1,5 @@
-#include <include/vec3.h>
+#pragma once
+#include <vec3.h>
 
 class triangle {
 public: 
