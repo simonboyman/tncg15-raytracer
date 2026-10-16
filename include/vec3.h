@@ -44,6 +44,12 @@ public:
 		return x*x + y*y + z*z;
 	}
 
+	bool near_zero() const {
+		// Return true if the vector is close to zero in all dimensions.
+		auto s = 1e-8;
+		return (std::fabs(x) < s) && (std::fabs(y) < s) && (std::fabs(z) < s);
+	}
+
 	float x;
 	float y;
 	float z;
@@ -105,4 +111,8 @@ inline vec3 random_on_hemisphere(const vec3& normal) {
 		return on_unit_sphere;
 	else
 		return -on_unit_sphere;
+}
+
+inline vec3 reflect(const vec3& v, const vec3& n) {
+	return v - 2*dot(v,n)*n;
 }

@@ -25,7 +25,6 @@ public:
             if (object->hit(r, interval(ray_t.min, closest_so_far), temp_rec)) {
                 hit_anything = true;
                 closest_so_far = temp_rec.t;
-                temp_rec.clr = object->get_color();
                 rec = temp_rec;
             }
         }

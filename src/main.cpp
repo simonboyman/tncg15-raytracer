@@ -12,8 +12,8 @@ int main() {
     // Render
 
     camera cam;
-    cam.samples_per_pixel = 50;
-    cam.max_depth = 20;
+    cam.samples_per_pixel = 1000;
+    cam.max_depth = 3;
     cam.render(world);
 
 }

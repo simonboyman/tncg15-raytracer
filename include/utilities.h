@@ -28,7 +28,7 @@ inline float random_float() {
     return dist(gen);
 }
 
-inline double random_float(float min, float max) {
+inline float random_float(float min, float max) {
     // Returns a random float in [min,max).
     return min + (max-min)*random_float();
 }

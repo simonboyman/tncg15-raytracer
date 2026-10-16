@@ -5,7 +5,7 @@
 class sphere : public hittable {
 public:
     sphere() {};
-    sphere(const vec3& c, const float r, color clr) : center(c), radius(std::fmax(0,r)), clr(clr) {}
+    sphere(const vec3& c, float r, shared_ptr<material> m) : center(c), radius(std::fmax(0, r)), mat(m) {}
 
     bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
         vec3 C = center - r.origin();
@@ -32,16 +32,12 @@ public:
         rec.p = r.at(t);
         vec3 outward_normal = (rec.p - center) / radius;
         rec.set_face_normal(r, outward_normal);
-        rec.clr = clr;
+        rec.mat = mat.get();
         return true;
-    }
-
-    color get_color() const override {
-        return clr;
     }
 
 private:
     vec3 center;
     float radius;
-    color clr;
+    shared_ptr<material> mat;
 };

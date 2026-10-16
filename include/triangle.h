@@ -6,10 +6,10 @@
 class triangle : public hittable {
 public:
 	triangle()
-		:v0(), v1(), v2(), normal(), clr() {};
+		:v0(), v1(), v2(), normal(), mat() {};
 
-	triangle(vec3 p1, vec3 p2, vec3 p3, vec3 c, vec3 e = vec3())
-	: v0(p1), v1(p2), v2(p3), normal(compute_normal()), clr(c), emission(e) {};
+	triangle(vec3 p1, vec3 p2, vec3 p3, shared_ptr<material> m)
+	: v0(p1), v1(p2), v2(p3), normal(compute_normal()), mat(m) {}
 
 	bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
 		float epsilon = std::numeric_limits<float>::epsilon();
@@ -29,14 +29,10 @@ public:
 			rec.t = t;
 			rec.p = r.at(t);
 			rec.set_face_normal(r, normal);
-			rec.clr = clr;
-			rec.emitted = emission;
+			rec.mat = mat.get();
 			return true;
 		}
 		return false;
-	}
-	color get_color() const override {
-		return clr;
 	}
 private:
 	vec3 compute_normal() const{
@@ -48,11 +44,9 @@ private:
 		return n;
 	}
 
-
 	vec3 v0;
 	vec3 v1;
 	vec3 v2;
 	vec3 normal;
-	color clr;
-	color emission;
+	shared_ptr<material> mat;
 };

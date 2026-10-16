@@ -1,11 +1,12 @@
 #pragma once
 #include "utilities.h"
+class material;
 class hit_record {
 public:
     vec3 p;
     vec3 normal;
-    color clr;
     float t = infinity;
+    const material* mat;
     color emitted;
     bool front_face;
 
@@ -24,5 +25,4 @@ class hittable {
 public:
     virtual ~hittable() = default;
     virtual bool hit(const ray& r, interval ray_t, hit_record& rec) const = 0;
-    virtual color get_color() const { return color(0, 0, 0); }
 };

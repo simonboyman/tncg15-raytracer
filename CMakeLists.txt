@@ -19,4 +19,5 @@ add_executable(tncg15_raytracer
         include/scene.h
         include/hittable_list.h
         include/utilities.h
-        include/interval.h)
+        include/interval.h
+        include/material.h)

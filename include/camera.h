@@ -3,11 +3,12 @@
 #include "interval.h"
 #include <dispatch/dispatch.h>
 #include <vector>
+#include <material.h>
 
 class camera {
 public:
-    const int image_width = 512;
-    const int image_height = 512;
+    const int image_width = 1024;
+    const int image_height = 1024;
     int samples_per_pixel = 10;
     int max_depth = 8;
 
@@ -15,24 +16,31 @@ public:
         initialize();
 
         std::vector<color> framebuffer(image_width * image_height);
-        color* fb = framebuffer.data();       // raw pointers, because blocks copy captured objects
-        const hittable* w = &world;           // hittable is abstract, so it can't be copied into the block
+        std::atomic<int> rows_done{0};
 
-        dispatch_apply(image_height, dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0),
-            ^(size_t j) {
-                for (int i = 0; i < image_width; i++) {
-                    color pixel_color(0,0,0);
-                    for (int sample = 0; sample < samples_per_pixel; sample++) {
-                        ray r = get_ray(i, (int)j);
-                        pixel_color += ray_color(r, max_depth, *w);
-                    }
-                    fb[j * image_width + i] = pixel_samples_scale * pixel_color;
+        struct job {
+            camera* self;
+            const hittable* world;
+            color* fb;
+            std::atomic<int>* done;
+        };
+        job jb{this, &world, framebuffer.data(), &rows_done};
+
+        dispatch_apply_f(image_height, dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), &jb,
+            [](void* ctx, size_t row) {
+                auto* j = static_cast<job*>(ctx);
+                j->self->render_row((int)row, *j->world, j->fb);
+
+                int d = ++(*j->done);   // atomic increment, returns the new count
+                if (d % 8 == 0 || d == j->self->image_height) {
+                    fprintf(stderr, "\rRows done: %d / %d", d, j->self->image_height);
                 }
             });
 
+        fprintf(stderr, "\nDone.\n");
+
         std::cout << "P3\n" << image_width << ' ' << image_height << "\n255\n";
         for (const auto& c : framebuffer) write_color(std::cout, c);
-        std::cerr << "Done.\n";
     }
 private:
     vec3 center;         // Camera center
@@ -82,13 +90,54 @@ private:
         return vec3(random_float() - 0.5, random_float() - 0.5, 0);
     }
 
-    color ray_color(const ray& r, int depth, const hittable& world) {
+    color ray_color(const ray& r, int depth, const hittable& world, bool count_emission = true) {
         if (depth <= 0) return color(0,0,0);
+
         hit_record rec;
         if (!world.hit(r, interval(0.001, infinity), rec))   // 0.001 instead of 0, to avoid self-hits
             return color(0,0,0);
 
-        vec3 direction = rec.normal + random_unit_vector();
-        return rec.emitted + rec.clr * ray_color(ray(rec.p, direction), depth - 1, world);
+        color result = count_emission ? rec.mat->emitted() : color(0,0,0);
+
+        if (rec.mat->is_diffuse()) {
+            const color Le(8,8,8);
+            const float light_area = 1.0f;
+
+            vec3 light_pt = vec3(random_float(1.5f, 2.5f), 3.99f, random_float(1.5f,2.5f));
+            vec3 shadow_dir = light_pt - rec.p;
+            ray shadowRay = ray(rec.p, shadow_dir);
+
+            float len = shadow_dir.length();
+            float len2 = shadow_dir.length_squared();
+            vec3 unit_light_pt = light_pt/len;
+            float cosS = dot(unit_light_pt, rec.normal);
+            float cosL = unit_light_pt.y;
+            float brdf = 1/pi;
+            if (cosS > 0 && cosL > 0) {
+                hit_record shr;
+                if (!world.hit(shadowRay, interval(0.001f, 0.999f), shr)) {
+                    result += (brdf * cosS * cosL * light_area / len2) * (rec.mat->diffuse_albedo() * Le);
+                }
+            }
+        }
+
+        ray scattered;
+        color attenuation;
+        if (rec.mat->scatter(r, rec, attenuation, scattered)) {
+            bool next_count = !rec.mat->is_diffuse();
+            result += attenuation * ray_color(scattered, depth - 1, world, next_count);
+        }
+        return result;
+    }
+
+    void render_row(int j, const hittable& world, color* fb) {
+        for (int i = 0; i < image_width; i++) {
+            color pixel_color(0,0,0);
+            for (int sample = 0; sample < samples_per_pixel; sample++) {
+                ray r = get_ray(i, j);
+                pixel_color += ray_color(r, max_depth, world);
+            }
+            fb[j * image_width + i] = pixel_samples_scale * pixel_color;
+        }
     }
 };
